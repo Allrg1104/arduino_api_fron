@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import "./Triqui.css";
+import "./app.css";
 
 export default function App() {
   const [board, setBoard] = useState(Array(3).fill(null).map(() => Array(3).fill("")));
   const [cursor, setCursor] = useState({ row: 0, col: 0 });
   const [turn, setTurn] = useState("X");
-  const [lastArduinoButton, setLastArduinoButton] = useState(null);
+  const [lastDatoId, setLastDatoId] = useState(null);
 
+  // Jugador 1 (teclado)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (turn !== "X") return;
@@ -17,23 +18,27 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cursor, turn]);
 
+  // Jugador 2 (Arduino)
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("https://arduino-back.vercel.app/api/datos");
-        const data = await res.json();
-        if (data.length === 0) return;
-        const ultimo = data[data.length - 1].dato;
-        if (ultimo !== lastArduinoButton) {
-          setLastArduinoButton(ultimo);
-          handleArduinoInput(ultimo);
-        }
-      } catch (err) {
-        console.error("Error leyendo datos del Arduino:", err.message);
-      }
-    }, 500);
+    const interval = setInterval(fetchArduinoInput, 1000);
     return () => clearInterval(interval);
-  }, [cursor, turn, lastArduinoButton]);
+  }, [lastDatoId, cursor, turn]);
+
+  const fetchArduinoInput = async () => {
+    try {
+      const res = await fetch("https://arduino-back.vercel.app/api/datos");
+      const data = await res.json();
+      if (data.length === 0) return;
+      const ultimo = data[data.length - 1];
+
+      if (ultimo._id !== lastDatoId && turn === "O") {
+        setLastDatoId(ultimo._id);
+        handleArduinoInput(ultimo.dato.toLowerCase());
+      }
+    } catch (err) {
+      console.error("Error obteniendo dato del Arduino:", err);
+    }
+  };
 
   const moveCursor = (key) => {
     setCursor((prev) => {
@@ -48,7 +53,7 @@ export default function App() {
 
   const playTurn = () => {
     setBoard((prevBoard) => {
-      const newBoard = prevBoard.map((row) => [...row]);
+      const newBoard = prevBoard.map((r) => [...r]);
       const { row, col } = cursor;
       if (newBoard[row][col] === "") {
         newBoard[row][col] = turn;
@@ -59,19 +64,11 @@ export default function App() {
   };
 
   const handleArduinoInput = (input) => {
-    if (turn !== "O") return;
-    switch (input.toLowerCase()) {
-      case "arriba":
-      case "abajo":
-      case "izquierda":
-      case "derecha":
-        moveCursor(input.toLowerCase());
-        break;
-      case "select":
-        playTurn();
-        break;
-      default:
-        break;
+    if (!["arriba", "abajo", "izquierda", "derecha", "select"].includes(input)) return;
+    if (input === "select") {
+      playTurn();
+    } else {
+      moveCursor(input);
     }
   };
 
@@ -87,9 +84,7 @@ export default function App() {
           row.map((cell, j) => (
             <div
               key={`${i}-${j}`}
-              className={`triqui-cell ${
-                cursor.row === i && cursor.col === j ? "cursor" : ""
-              }`}
+              className={`triqui-cell ${cursor.row === i && cursor.col === j ? "cursor" : ""}`}
             >
               {cell}
             </div>
@@ -103,4 +98,3 @@ export default function App() {
     </div>
   );
 }
-
