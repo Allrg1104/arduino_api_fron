@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./styles/triqui.css";
- // 👈 Importamos el CSS externo
+import "./Triqui.css";
 
 export default function App() {
   const [board, setBoard] = useState(Array(3).fill(null).map(() => Array(3).fill("")));
