@@ -22,21 +22,25 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(fetchArduinoInput, 1000);
     return () => clearInterval(interval);
-  }, [lastDatoId, cursor, turn]);
+  }, [cursor, turn]);
 
   const fetchArduinoInput = async () => {
     try {
-      const res = await fetch("https://arduino-back.vercel.app/api/datos");
+      //const res = await fetch("https://arduino-api-back.vercel.app/api/datos");
+      const res = await fetch("http://localhost:3000/api/datos");
       const data = await res.json();
       if (data.length === 0) return;
-      const ultimo = data[data.length - 1];
 
-      if (ultimo._id !== lastDatoId && turn === "O") {
+      const ultimo = data[data.length - 1];
+      const dato = ultimo.dato.toLowerCase().trim();
+
+      if (turn === "O") {
         setLastDatoId(ultimo._id);
-        handleArduinoInput(ultimo.dato.toLowerCase());
+        console.log("📲 Arduino presionó:", dato);
+        handleArduinoInput(dato);
       }
     } catch (err) {
-      console.error("Error obteniendo dato del Arduino:", err);
+      console.error("❌ Error obteniendo dato del Arduino:", err);
     }
   };
 
@@ -63,8 +67,19 @@ export default function App() {
     });
   };
 
-  const handleArduinoInput = (input) => {
+  const handleArduinoInput = (inputRaw) => {
+    const mapTeclas = {
+      a: "arriba",
+      b: "abajo",
+      c: "izquierda",
+      d: "derecha",
+      s: "select", // Para el botón "SELECT"
+    };
+
+    const input = mapTeclas[inputRaw] || inputRaw;
+
     if (!["arriba", "abajo", "izquierda", "derecha", "select"].includes(input)) return;
+
     if (input === "select") {
       playTurn();
     } else {
